@@ -167,3 +167,63 @@ def test_extract_invalid_zip(tmp_path):
     result = extract_archive(bad_file, dest)
 
     assert result.success is False
+
+
+# ---------------------------------------------------------------------------
+# Integrity failure tests (CRC & SHA-256)
+# ---------------------------------------------------------------------------
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_integrity_failure_corrupted_crc(mock_sec, tmp_path):
+    """Archive with corrupted payload -> CRC check fails, file placed in failed, cleaned up."""
+    zip_path = tmp_path / "crc_corrupt.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("good.txt", b"good payload")
+        zf.writestr("corrupted.txt", b"corrupted payload data")
+
+    # Corrupt the raw payload byte of corrupted.txt
+    raw = bytearray(zip_path.read_bytes())
+    idx = raw.find(b"corrupted payload")
+    assert idx != -1
+    raw[idx] = ord("X")
+    zip_path.write_bytes(raw)
+
+    dest = tmp_path / "out"
+    result = extract_archive(zip_path, dest)
+
+    assert result.success is False
+    assert "good.txt" in result.extracted
+    assert "corrupted.txt" in result.failed
+    assert not (dest / "corrupted.txt").exists()
+
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_integrity_failure_sha256_mismatch(mock_sec, tmp_path):
+    """When expected_hashes does not match, entry lands in failed and is cleaned up."""
+    archive = _make_zip(tmp_path / "test.zip", {"data.txt": b"original content"})
+    dest = tmp_path / "out"
+
+    # Provide an incorrect hash
+    bad_hashes = {"data.txt": "0" * 64}
+    result = extract_archive(archive, dest, expected_hashes=bad_hashes)
+
+    assert result.success is False
+    assert "data.txt" in result.failed
+    assert "data.txt" not in result.extracted
+    assert not (dest / "data.txt").exists()
+
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_integrity_sha256_matching(mock_sec, tmp_path):
+    """When expected_hashes matches actual SHA-256, extraction succeeds."""
+    import hashlib
+    archive = _make_zip(tmp_path / "test.zip", {"data.txt": b"original content"})
+    dest = tmp_path / "out"
+
+    good_hash = hashlib.sha256(b"original content").hexdigest()
+    result = extract_archive(archive, dest, expected_hashes={"data.txt": good_hash})
+
+    assert result.success is True
+    assert "data.txt" in result.extracted
+    assert (dest / "data.txt").read_bytes() == b"original content"
+

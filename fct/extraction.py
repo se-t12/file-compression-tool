@@ -47,6 +47,7 @@ def extract_archive(
     archive_path: Path,
     destination: Path,
     overwrite_policy: str = "skip",
+    expected_hashes: dict[str, str] | None = None,
 ) -> ExtractionResult:
     """Extract all entries from `archive_path` into `destination`.
 
@@ -54,6 +55,7 @@ def extract_archive(
         archive_path: Path to the ZIP file to extract.
         destination: Directory to extract files into.
         overwrite_policy: One of "overwrite", "skip", or "rename".
+        expected_hashes: Optional mapping of entry name to expected SHA-256 hex digest.
 
     Returns:
         ExtractionResult with lists of extracted, skipped, and failed entries.
@@ -113,6 +115,15 @@ def extract_archive(
                     if target.exists():
                         temp_files.append(target)
                     continue
+
+                # --- Integrity verification: SHA-256 (FCT-NF-004) ---
+                if expected_hashes and entry_name in expected_hashes:
+                    if not integrity.verify_entry(target, expected_hashes[entry_name]):
+                        logger.error("Integrity check failed for %s", entry_name)
+                        failed.append(entry_name)
+                        if target.exists():
+                            temp_files.append(target)
+                        continue
 
                 extracted.append(entry_name)
 
