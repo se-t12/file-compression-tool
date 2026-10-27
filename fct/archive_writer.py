@@ -88,7 +88,11 @@ def create_archive(
                 success=False,
                 entries_written=0,
                 output_path=output_path,
-                errors=[f"Output already exists and policy is 'skip': {output_path}"],
+                errors=[
+                    f"Output file '{output_path}' already exists. "
+                    "Use --on-duplicate overwrite to replace it, or "
+                    "--on-duplicate rename to save alongside it."
+                ],
             )
         elif overwrite_policy == "rename":
             stem = output_path.stem
@@ -134,7 +138,7 @@ def create_archive(
                             errors.append(f"Permission denied: {file_abs}")
 
             else:
-                errors.append(f"Path not found or not accessible: {input_path}")
+                errors.append(f"Input path not found: '{input_path}'")
 
     return ArchiveResult(
         success=entries_written > 0,

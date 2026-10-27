@@ -133,7 +133,7 @@ def extract_archive(
             success=False,
             extracted=extracted,
             skipped=skipped,
-            failed=[str(exc)],
+            failed=[f"'{archive_path}' is not a valid ZIP archive: {exc}"],
         )
     finally:
         # FCT-F-014: always clean up temp resources

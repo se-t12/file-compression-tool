@@ -21,7 +21,9 @@ def validate_archive(archive_path: Path) -> ValidationResult:
             if bad_file is not None:
                 return ValidationResult(
                     ok=False,
-                    reason=f"Corrupted file in archive: {bad_file}",
+                    reason=(
+                        f"'{archive_path}': corrupted entry detected: '{bad_file}'"
+                    ),
                 )
 
             entries = list_entries(archive_path)
@@ -32,10 +34,15 @@ def validate_archive(archive_path: Path) -> ValidationResult:
                 entries=entries,
             )
 
+    except FileNotFoundError:
+        return ValidationResult(
+            ok=False,
+            reason=f"Archive file not found: '{archive_path}'",
+        )
     except (zipfile.BadZipFile, OSError) as exc:
         return ValidationResult(
             ok=False,
-            reason=f"Invalid archive: {exc}",
+            reason=f"'{archive_path}' is not a valid ZIP archive: {exc}",
         )
 
 
