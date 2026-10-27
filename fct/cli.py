@@ -43,6 +43,27 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser = subparsers.add_parser("list", help="List the contents of a ZIP archive without extracting")
     list_parser.add_argument("archive", type=Path, help="Archive to inspect")
 
+    mem_parser = subparsers.add_parser(
+        "memory-check", help="Run FCT-NF-002 peak memory check (512 MB limit)"
+    )
+    mem_parser.add_argument(
+        "--size-mb",
+        type=float,
+        default=1000.0,
+        help="Workload size in decimal MB (default: 1000.0 MB / 1 GB)",
+    )
+    mem_parser.add_argument(
+        "--threshold-mb",
+        type=float,
+        default=512.0,
+        help="Memory threshold in MB (default: 512.0 MB)",
+    )
+    mem_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw results in JSON format",
+    )
+
     return parser
 
 
@@ -58,6 +79,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             return orchestrator.extract_command(args.archive, args.destination, args.on_duplicate)
         if args.command == "list":
             return orchestrator.list_command(args.archive)
+        if args.command == "memory-check":
+            return orchestrator.memory_check_command(args.size_mb, args.threshold_mb, args.json)
+
     except NotImplementedError as exc:
         # Friendly message while modules are still being implemented during Sprint 1.
         print(f"Not implemented yet: {exc}")
