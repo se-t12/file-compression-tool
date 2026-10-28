@@ -63,7 +63,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Not implemented yet: {exc}")
         return 2
     except Exception as exc:  # noqa: BLE001 -- top-level CLI boundary, FCT-NF-003
-        print(f"Error: {exc}")
+        print(f"Error ({type(exc).__name__}): {exc}")
         return 1
 
     parser.print_help()

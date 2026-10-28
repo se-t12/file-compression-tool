@@ -28,7 +28,7 @@ def compress_command(input_paths: List[Path], output_path: Path, overwrite_polic
         print(f"Created '{result.output_path}' with {result.entries_written} entries.")
         return 0
 
-    print(f"Compression failed for '{output_path}':")
+    print(f"Compression failed: could not create '{output_path}'.")
     for err in result.errors:
         print(f"  - {err}")
     return 1
