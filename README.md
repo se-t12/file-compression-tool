@@ -48,7 +48,29 @@ pip install -r requirements-dev.txt
 python -m fct.cli compress file1.txt folder/ -o out.zip
 python -m fct.cli extract out.zip -d dest/
 python -m fct.cli list out.zip
+python -m fct.cli benchmark --size-mb 100 --iterations 5
 ```
+
+## Performance Benchmark (FCT-NF-001 / TC-Perf-01)
+
+The tool provides an automated benchmark to verify compliance with non-functional requirement **FCT-NF-001** (95th-percentile elapsed time $\le$ 2.0 seconds per 100 MB):
+
+```bash
+# Run standard 100 MB benchmark (5 iterations)
+python -m fct.benchmark --size-mb 100 --iterations 5
+
+# Or run via CLI:
+python -m fct.cli benchmark --size-mb 100 --iterations 5
+
+# Output raw metrics in JSON format
+python -m fct.benchmark --size-mb 100 --iterations 5 --json
+```
+
+- **Operations Measured**: Benchmarks compression (`create_archive`) and extraction (`extract_archive`) independently, excluding fixture generation, directory scanning, and cleanup time.
+- **Input Size & Units**: Default size is 100 MB where 1 MB = 1,000,000 bytes (decimal SI standard). Throughput is reported in both decimal MB/s ($10^6$ B/s) and binary MiB/s ($2^{20}$ B/s).
+- **Threshold Evaluation**: Computes the 95th-percentile elapsed time normalized to 100 MB across all iterations. The benchmark passes if both operations achieve $\le 2.0$ seconds per 100 MB ($\ge 50$ MB/s throughput at p95).
+- **Measurement Conditions & Hardware**: Measures wall-clock time using `time.perf_counter()`. Measurements run in an isolated temporary directory and clean up automatically. Performance may vary depending on disk I/O, OS file caching, and CPU load.
+
 
 ## Running Tests
 

@@ -66,3 +66,24 @@ def list_command(archive_path: Path) -> int:
         kind = "DIR " if entry.is_dir else "FILE"
         print(f"{kind}  {entry.size:>10} bytes  {entry.name}")
     return 0
+
+
+def benchmark_command(size_mb: float = 100.0, iterations: int = 5, json_output: bool = False) -> int:
+    """Run the NF-001 speed benchmark flow (FCT-NF-001, TC-Perf-01). Returns exit code."""
+    from . import benchmark
+    size_bytes = int(size_mb * benchmark.BYTES_PER_MB)
+    report = benchmark.run_speed_benchmark(data_size_bytes=size_bytes, iterations=iterations)
+    logger.info(
+        "operation=benchmark size_mb=%.2f iterations=%d all_passed=%s",
+        size_mb,
+        iterations,
+        report.all_passed,
+    )
+    if json_output:
+        import json
+        from dataclasses import asdict
+        print(json.dumps(asdict(report), indent=2))
+    else:
+        print(benchmark.format_report_text(report))
+    return 0 if report.all_passed else 2
+
