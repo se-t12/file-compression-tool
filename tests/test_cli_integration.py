@@ -195,23 +195,33 @@ def test_extract_rename_policy_keeps_both_versions(capsys, tmp_path, sample_dir)
 # Security: path traversal (zip-slip) through the whole pipeline
 # ---------------------------------------------------------------------------
 
+# An absolute-path entry would land at the root of the current drive if the security
+# check ever failed. The test removes this file before and after, so a failed run
+# never leaves junk behind and never makes the next run fail by accident.
+ABSOLUTE_PROBE = Path("/fct_abs_probe_evil.txt")
+
+
 def test_extract_blocks_path_traversal_end_to_end(capsys, tmp_path):
     """FCT-F-008, FCT-SR-001: unsafe entries are refused, safe entries still extract."""
     evil = tmp_path / "evil.zip"
     with zipfile.ZipFile(evil, "w") as zf:
         zf.writestr("../escape.txt", "should never be written")
-        zf.writestr("/fct_abs_probe_evil.txt", "should never be written")
+        zf.writestr(ABSOLUTE_PROBE.as_posix(), "should never be written")
         zf.writestr("ok.txt", "fine")
     dest = tmp_path / "out"
 
-    code, out = run_cli(capsys, "extract", evil, "-d", dest)
+    ABSOLUTE_PROBE.unlink(missing_ok=True)  # clean slate
+    try:
+        code, out = run_cli(capsys, "extract", evil, "-d", dest)
 
-    assert code == 1  # a blocked entry makes the command report failure
-    assert "Failed 2 file(s)" in out
-    assert (dest / "ok.txt").read_text() == "fine"  # the harmless entry still extracted
-    assert not (tmp_path / "escape.txt").exists()  # nothing escaped above the destination
-    assert not Path("/fct_abs_probe_evil.txt").exists()  # nothing written at an absolute path
-    assert sorted(read_tree(dest)) == ["ok.txt"]
+        assert code == 1  # a blocked entry makes the command report failure
+        assert "Failed 2 file(s)" in out
+        assert (dest / "ok.txt").read_text() == "fine"  # the harmless entry still extracted
+        assert not (tmp_path / "escape.txt").exists()  # nothing escaped above the destination
+        assert not ABSOLUTE_PROBE.exists()  # nothing written at an absolute path
+        assert sorted(read_tree(dest)) == ["ok.txt"]
+    finally:
+        ABSOLUTE_PROBE.unlink(missing_ok=True)  # never leave a stray file behind
 
 
 # ---------------------------------------------------------------------------
