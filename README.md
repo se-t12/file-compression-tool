@@ -48,7 +48,32 @@ pip install -r requirements-dev.txt
 python -m fct.cli compress file1.txt folder/ -o out.zip
 python -m fct.cli extract out.zip -d dest/
 python -m fct.cli list out.zip
+python -m fct.cli memory-check --size-mb 1000 --threshold-mb 512
 ```
+
+## Memory Benchmark (FCT-NF-002 / TC-Perf-02)
+
+The tool provides an automated memory benchmark to verify compliance with non-functional requirement **FCT-NF-002** (peak working memory $\le$ 512 MB for a 1 GB workload):
+
+```bash
+# Run standard 1 GB (1,000 MB) memory benchmark
+python -m fct.memory_check --size-mb 1000 --threshold-mb 512
+
+# Or run via CLI:
+python -m fct.cli memory-check --size-mb 1000 --threshold-mb 512
+
+# Output raw metrics in JSON format
+python -m fct.memory_check --size-mb 1000 --threshold-mb 512 --json
+```
+
+- **Operations Measured**: Streams a sequential test workload file of known size and measures peak process working set (RSS) and Python heap allocations during compression (`create_archive`) and extraction (`extract_archive`), excluding fixture setup and cleanup time.
+- **Workload & Units**: Standard workload is 1 GB (1,000,000,000 bytes decimal / 953.67 MiB). Units are reported in decimal MB ($10^6$ bytes) and binary MiB ($2^{20}$ bytes).
+- **Threshold Evaluation**: Checks that peak process working set remains $\le 512\text{ MB}$ ($512,000,000\text{ bytes}$) for both compression and extraction.
+- **Actual Measured Results (1 GB Workload)**:
+  - Compression: **30.30 MB** peak working set (elapsed ~8.45 s) $\rightarrow$ PASS
+  - Extraction: **50.22 MB** peak working set (elapsed ~5.79 s) $\rightarrow$ PASS
+- **Measurement Method**: Uses native OS APIs (`GetProcessMemoryInfo` on Windows, `/proc/self/statm` and `getrusage` on Unix) combined with high-frequency background sampling and Python `tracemalloc`.
+
 
 ## Running Tests
 

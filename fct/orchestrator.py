@@ -66,3 +66,33 @@ def list_command(archive_path: Path) -> int:
         kind = "DIR " if entry.is_dir else "FILE"
         print(f"{kind}  {entry.size:>10} bytes  {entry.name}")
     return 0
+
+
+def memory_check_command(
+    size_mb: float = 1000.0,
+    threshold_mb: float = 512.0,
+    json_output: bool = False,
+) -> int:
+    """Run the NF-002 peak memory check flow (FCT-NF-002, TC-Perf-02). Returns exit code."""
+    from . import memory_check
+
+    size_bytes = int(size_mb * memory_check.BYTES_PER_MB)
+    threshold_bytes = int(threshold_mb * memory_check.BYTES_PER_MB)
+    report = memory_check.run_memory_benchmark(
+        workload_bytes=size_bytes, threshold_bytes=threshold_bytes
+    )
+    logger.info(
+        "operation=memory_check size_mb=%.2f threshold_mb=%.2f all_passed=%s",
+        size_mb,
+        threshold_mb,
+        report.all_passed,
+    )
+    if json_output:
+        import json
+        from dataclasses import asdict
+
+        print(json.dumps(asdict(report), indent=2))
+    else:
+        print(memory_check.format_report_text(report))
+    return 0 if report.all_passed else 2
+
