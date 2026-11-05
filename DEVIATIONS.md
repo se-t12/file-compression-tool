@@ -13,7 +13,9 @@ This file lists where the implementation differs from what the SRS, SAD and Test
 | FCT-F-005 | Visible progress or status while a multi-file compression runs | Only a final summary is printed after compression finishes. No live progress. | Open, Sprint 2 |
 | FCT-F-001 (acceptance criterion) | Selected inputs are displayed before compression starts | The CLI accepts the inputs but does not echo them before compressing | Open, Sprint 2 |
 | FCT-F-003 | Relative directory structure of selected folders is preserved | Files and nested folders are preserved. Empty folders are not stored (only files are archived, and directory entries are skipped on extraction). | Accepted |
-| FCT-NF-001, NF-002 | Speed (2 s per 100 MB) and memory (512 MB) targets met | Files are streamed, but the targets have not been measured yet | Open, Sprint 2 |
+| FCT-NF-001 | Speed (2 s per 100 MB) target met | Automated benchmark in `fct/benchmark.py` and test suite `tests/test_benchmark.py` added. Measured p95 time is ~1.04 s (compression) and ~0.62 s (extraction) per 100 MB, satisfying the <= 2.0 s threshold. | Closed, Sprint 2 |
+| FCT-NF-002 | Memory (512 MB) target met | Files are streamed, but memory target has not been measured yet | Open, Sprint 2 |
+
 | FCT-NF-004 | SHA-256 and size preserved over a compress-extract round trip | No automated round-trip test exists yet | Open, Sprint 2 |
 | FCT-NF-005 | Path handling verified on each supported OS | Automated tests currently run on Linux (CI, Python 3.11) only | Open, Sprint 2 |
 
@@ -37,7 +39,9 @@ This file lists where the implementation differs from what the SRS, SAD and Test
 |---|---|---|---|
 | Test case IDs | Cases named like TC-Comp-01, mapped to requirement IDs | pytest tests have descriptive names and are not yet tagged with TC IDs. The RTM mapping is not written. | Open, Sprint 2 |
 | Integration tests | CLI to Orchestrator to core modules | The existing CLI tests mock the orchestrator. Tests that run the real CLI end to end are not written yet. | Open, Sprint 2 |
-| Performance, usability, manual checks | Timing and memory runs, manual CLI checklists | Not executed yet | Open, Sprint 2 |
+| Performance (timing runs TC-Perf-01) | Timing runs against FCT-NF-001 (<= 2s per 100 MB) | Automated benchmark executed and verified: compression ~1.04s, extraction ~0.62s p95 | Closed, Sprint 2 |
+| Memory and usability checks | Memory runs against FCT-NF-002, manual CLI checklists | Memory runs planned for Issue #25 | Open, Sprint 2 |
+
 | Schedule | Milestone dates left as "to be scheduled" | Sprint 1: 19 to 23 Oct. Sprint 2: 26 to 30 Oct. | Closed |
 | Test Plan PDF in repo | Part of the deliverables | Not committed yet | Open, Sprint 1 |
 
