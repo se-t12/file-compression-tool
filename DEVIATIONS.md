@@ -16,7 +16,7 @@ This file lists where the implementation differs from what the SRS, SAD and Test
 | FCT-NF-001 | Speed (2 s per 100 MB) target met | Automated benchmark in `fct/benchmark.py` and test suite `tests/test_benchmark.py` added. Measured p95 time is ~1.04 s (compression) and ~0.62 s (extraction) per 100 MB, satisfying the <= 2.0 s threshold. | Closed, Sprint 2 |
 | FCT-NF-002 | Memory (512 MB) target met | Files are streamed, but memory target has not been measured yet | Open, Sprint 2 |
 
-| FCT-NF-004 | SHA-256 and size preserved over a compress-extract round trip | No automated round-trip test exists yet | Open, Sprint 2 |
+| FCT-NF-004 | SHA-256 and size preserved over a compress-extract round trip | Automated round-trip test suite in `tests/test_round_trip.py` verifies file structure, byte sizes, and SHA-256 digests across text and binary workloads (TC-Corr-01) | Closed, Sprint 2 |
 | FCT-NF-005 | Path handling verified on each supported OS | Automated tests currently run on Linux (CI, Python 3.11) only | Open, Sprint 2 |
 
 ## 2. SAD: design differences
