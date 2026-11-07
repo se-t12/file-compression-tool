@@ -219,3 +219,39 @@ def test_unknown_policy_raises_value_error(tmp_path):
     out = tmp_path / "out.zip"
     with pytest.raises(ValueError, match="overwrite_policy"):
         create_archive([f], out, overwrite_policy="explode")
+
+
+# ---------------------------------------------------------------------------
+# SHA-256 Entry Comment Recording (FCT-NF-004, FCT-SR-003, Issue #30)
+# ---------------------------------------------------------------------------
+
+def test_create_archive_records_sha256_in_entry_comments(tmp_path):
+    """FCT-NF-004 / Issue #30: create_archive computes SHA-256 and stores it in
+    each ZipInfo.comment for integrity verification."""
+    from fct import integrity
+
+    file1 = tmp_path / "doc.txt"
+    file1.write_text("Sample document for hashing")
+    sha1 = integrity.compute_sha256(file1)
+
+    folder = tmp_path / "dir"
+    folder.mkdir()
+    nested = folder / "nested.bin"
+    nested.write_bytes(bytes(range(128)))
+    sha_nested = integrity.compute_sha256(nested)
+
+    out = tmp_path / "hashed.zip"
+    result = create_archive([file1, folder], out, overwrite_policy="overwrite")
+
+    assert result.success is True
+    assert result.entries_written == 2
+
+    with zipfile.ZipFile(out, "r") as zf:
+        # Check single file comment
+        info1 = zf.getinfo("doc.txt")
+        assert info1.comment.decode("ascii") == sha1
+
+        # Check nested file comment
+        info_nested = zf.getinfo("dir/nested.bin")
+        assert info_nested.comment.decode("ascii") == sha_nested
+

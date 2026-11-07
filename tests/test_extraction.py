@@ -227,3 +227,82 @@ def test_extract_integrity_sha256_matching(mock_sec, tmp_path):
     assert "data.txt" in result.extracted
     assert (dest / "data.txt").read_bytes() == b"original content"
 
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_entry_comment_sha256_verification_success(mock_sec, tmp_path):
+    """When entry comment contains valid SHA-256 digest, extraction succeeds automatically."""
+    import hashlib
+    content = b"verified content payload"
+    sha = hashlib.sha256(content).hexdigest()
+
+    zip_path = tmp_path / "comment_sha.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("doc.txt", content)
+        zf.filelist[-1].comment = sha.encode("ascii")
+
+    dest = tmp_path / "out"
+    result = extract_archive(zip_path, dest)
+
+    assert result.success is True
+    assert "doc.txt" in result.extracted
+    assert (dest / "doc.txt").read_bytes() == content
+
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_entry_comment_tampered_file_caught_and_reported(mock_sec, tmp_path):
+    """FCT-F-012, FCT-SR-003: Tampered file (SHA-256 mismatch from entry comment)
+    is caught, added to failed, and deleted from destination."""
+    import hashlib
+    original_content = b"original secure content"
+    original_sha = hashlib.sha256(original_content).hexdigest()
+
+    # Tampered content has same or different length, but CRC matches its own content
+    # (simulating an adversary modifying content and CRC header, but unable to fake original SHA-256)
+    tampered_content = b"tampered altered content"
+
+    zip_path = tmp_path / "tampered.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zf:
+        # Write tampered content, but keep original_sha in comment
+        zf.writestr("secure.txt", tampered_content)
+        zf.filelist[-1].comment = original_sha.encode("ascii")
+
+    dest = tmp_path / "out"
+    result = extract_archive(zip_path, dest)
+
+    assert result.success is False
+    assert "secure.txt" in result.failed
+    assert "secure.txt" not in result.extracted
+    # Must be cleaned up per FCT-F-014 / resource_manager
+    assert not (dest / "secure.txt").exists()
+
+
+@patch("fct.extraction.resolve_safe_path", side_effect=_mock_resolve_safe)
+def test_extract_mixed_good_and_tampered_entries(mock_sec, tmp_path):
+    """One good file and one tampered file in the same archive:
+    good file extracts, tampered file fails and is cleaned up."""
+    import hashlib
+    good_content = b"good file content"
+    good_sha = hashlib.sha256(good_content).hexdigest()
+
+    tampered_content = b"malicious injected bytes"
+    expected_bad_sha = hashlib.sha256(b"legitimate original content").hexdigest()
+
+    zip_path = tmp_path / "mixed.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("good.txt", good_content)
+        zf.filelist[-1].comment = good_sha.encode("ascii")
+
+        zf.writestr("tampered.txt", tampered_content)
+        zf.filelist[-1].comment = expected_bad_sha.encode("ascii")
+
+    dest = tmp_path / "out"
+    result = extract_archive(zip_path, dest)
+
+    assert result.success is False
+    assert "good.txt" in result.extracted
+    assert (dest / "good.txt").read_bytes() == good_content
+
+    assert "tampered.txt" in result.failed
+    assert not (dest / "tampered.txt").exists()
+
+
