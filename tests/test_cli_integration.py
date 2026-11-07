@@ -313,3 +313,34 @@ def test_real_process_help_and_unknown_command():
 
     result = _run_process("explode")
     assert result.returncode != 0
+
+
+def test_cli_extract_tampered_archive_caught_and_reported(capsys, tmp_path):
+    """FCT-F-012, FCT-SR-003, Issue #30: CLI extract detects tampered entry,
+    reports failure, exits with code 1, and cleans up tampered file."""
+    src = tmp_path / "secret.txt"
+    src.write_text("authentic payload")
+    archive = tmp_path / "tampered.zip"
+    dest = tmp_path / "dest"
+
+    # Compress file using CLI so SHA-256 is recorded
+    code, out = run_cli(capsys, "compress", src, "-o", archive)
+    assert code == 0
+
+    # Modify the entry data inside the zip (tamper with it)
+    with zipfile.ZipFile(archive, "r") as zf:
+        infolist = zf.infolist()
+        entry = infolist[0]
+        recorded_comment = entry.comment
+
+    # Overwrite the zip with tampered payload but original comment
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr(entry.filename, b"forged corrupted data")
+        zf.filelist[-1].comment = recorded_comment
+
+    # Extract via CLI: should catch the SHA-256 mismatch
+    code, out = run_cli(capsys, "extract", archive, "-d", dest)
+    assert code == 1
+    assert "Failed 1 file(s): secret.txt" in out
+    assert not (dest / "secret.txt").exists()
+
