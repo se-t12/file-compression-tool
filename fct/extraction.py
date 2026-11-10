@@ -30,6 +30,21 @@ logger = logging.getLogger("fct.extraction")
 _EXTRACT_BUF = 1 << 22  # 4 MB
 
 
+def _extract_sha256_comment(comment: bytes) -> str | None:
+    """Parse and return hex SHA-256 digest from entry comment if present."""
+    if not comment:
+        return None
+    try:
+        text = comment.decode("ascii").strip()
+        if text.startswith("sha256:"):
+            text = text[7:].strip()
+        if len(text) == 64 and all(c in "0123456789abcdefABCDEF" for c in text):
+            return text.lower()
+    except Exception:
+        pass
+    return None
+
+
 def _find_rename(target: Path) -> Path:
     """Return a non-colliding path like 'file (1).txt', 'file (2).txt', etc."""
     stem = target.stem
@@ -116,10 +131,16 @@ def extract_archive(
                         temp_files.append(target)
                     continue
 
-                # --- Integrity verification: SHA-256 (FCT-NF-004) ---
+                # --- Integrity verification: SHA-256 (FCT-NF-004, FCT-SR-003) ---
+                expected_sha = None
                 if expected_hashes and entry_name in expected_hashes:
-                    if not integrity.verify_entry(target, expected_hashes[entry_name]):
-                        logger.error("Integrity check failed for %s", entry_name)
+                    expected_sha = expected_hashes[entry_name]
+                else:
+                    expected_sha = _extract_sha256_comment(info.comment)
+
+                if expected_sha:
+                    if not integrity.verify_entry(target, expected_sha):
+                        logger.error("Integrity check failed for %s (SHA-256 mismatch)", entry_name)
                         failed.append(entry_name)
                         if target.exists():
                             temp_files.append(target)

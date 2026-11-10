@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import List
 
 from .models import ArchiveResult
+from . import integrity
 
 
 def create_archive(
@@ -115,6 +116,8 @@ def create_archive(
                 # Single file: archive name is just the file's own name.
                 try:
                     zf.write(input_path, arcname=input_path.name)
+                    file_sha = integrity.compute_sha256(input_path)
+                    zf.filelist[-1].comment = file_sha.encode("ascii")
                     entries_written += 1
                 except FileNotFoundError:
                     errors.append(f"File not found: {input_path}")
@@ -131,6 +134,8 @@ def create_archive(
                         arcname = str(file_abs.relative_to(parent))
                         try:
                             zf.write(file_abs, arcname=arcname)
+                            file_sha = integrity.compute_sha256(file_abs)
+                            zf.filelist[-1].comment = file_sha.encode("ascii")
                             entries_written += 1
                         except FileNotFoundError:
                             errors.append(f"File not found: {file_abs}")

@@ -24,8 +24,8 @@ This file lists where the implementation differs from what the SRS, SAD and Test
 | Area | SAD says | Implemented | Status |
 |---|---|---|---|
 | Component structure | Separate Input Selector (Path Module), Compression Module, File I/O Module | Folded into one module, `archive_writer.py`. Input checks and relative-path handling are done there. | Accepted |
-| Sequence Diagram 1 (compress) | Archive Writer calls the Integrity Module to hash each entry (SHA-256) | Not done. Compression does not compute hashes. | Open, Sprint 2 |
-| Integrity verification | Extraction verifies entries with CRC and SHA-256 | `integrity.py` (SHA-256) is implemented and tested, but the CLI never passes expected hashes, so in normal use only the ZIP CRC-32 check runs (via `zipfile`) | Open, Sprint 2 |
+| Sequence Diagram 1 (compress) | Archive Writer calls the Integrity Module to hash each entry (SHA-256) | Archive Writer calls `integrity.compute_sha256()` on each entry and records the SHA-256 hex digest in `ZipInfo.comment`. | Closed, Sprint 2 |
+| Integrity verification | Extraction verifies entries with CRC and SHA-256 | `extraction.py` verifies extracted files against the SHA-256 recorded in `ZipInfo.comment` (or `expected_hashes`). Any corrupted or tampered entry is logged, reported in `failed`, and cleaned up. | Closed, Sprint 2 |
 | Archive Parser and Security Validator | Parser calls the Security Validator to validate structure | The parser validates structure itself using `zipfile`. The Security Validator is used only by extraction, for path checks. | Accepted |
 | Error handling in the module APIs | `create_archive` raises FileNotFoundError / PermissionError. `extract_archive` raises PathTraversalError / BadZipFile. | Per-file problems are recorded in the result (`errors` / `failed`) instead of raising, so one bad file does not stop the whole run. Only invalid arguments raise `ValueError`. | Accepted |
 | Function signatures | `extract_archive(archive_path, destination, overwrite_policy)` | Extra optional parameter `expected_hashes`. `ValidationResult` also has an extra `entries` field. Existing calls still work. | Accepted |
